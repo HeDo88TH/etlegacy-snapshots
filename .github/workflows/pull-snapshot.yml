@@ -22,21 +22,26 @@ jobs:
       - name: Extract latest x86_64 build URL
         id: extract_url
         run: |
-          # Extract the x86_64 .tar.gz link using htmlq (requires jq and htmlq installed)
+          # Extract the x86_64 .tar.gz link using htmlq
           FILE_URL=$(cat page.html | htmlq --attribute href a | grep 'x86_64.tar.gz' | head -n 1)
+          echo "File URL: $FILE_URL"
           echo "::set-output name=file_url::$FILE_URL"
 
-      - name: Extract build version
+      - name: Extract build version and file name
         id: extract_version
         run: |
-          FILE_NAME=$(basename "${{ steps.extract_url.outputs.file_url }}")
+          FILE_URL="${{ steps.extract_url.outputs.file_url }}"
+          FILE_NAME=$(basename "$FILE_URL")
           VERSION=$(echo $FILE_NAME | sed 's/.*-\(.*\)-x86_64.tar.gz/\1/')
+          echo "File name: $FILE_NAME"
+          echo "Version: $VERSION"
+          echo "::set-output name=file_name::$FILE_NAME"
           echo "::set-output name=version::$VERSION"
 
       - name: Check if build already exists
         id: check_existing
         run: |
-          FILE_NAME=$(basename "${{ steps.extract_url.outputs.file_url }}")
+          FILE_NAME="${{ steps.extract_version.outputs.file_name }}"
           if [ -f "./$FILE_NAME" ]; then
             echo "Build already exists, skipping."
             echo "::set-output name=exists::true"
@@ -48,13 +53,13 @@ jobs:
       - name: Download new build
         if: steps.check_existing.outputs.exists == 'false'
         run: |
-          curl -L ${{ steps.extract_url.outputs.file_url }} -o ${{ steps.extract_url.outputs.file_url | split('/')[-1] }}
+          curl -L ${{ steps.extract_url.outputs.file_url }} -o ${{ steps.extract_version.outputs.file_name }}
 
       - name: Commit new build
         if: steps.check_existing.outputs.exists == 'false'
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
-          git add ${{ steps.extract_url.outputs.file_url | split('/')[-1] }}
+          git add ${{ steps.extract_version.outputs.file_name }}
           git commit -m "New build ${{ steps.extract_version.outputs.version }}"
           git push
