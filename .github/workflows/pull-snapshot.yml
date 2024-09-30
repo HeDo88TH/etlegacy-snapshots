@@ -51,6 +51,7 @@ jobs:
           else
             echo "Build does not exist, downloading."
             echo "exists=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Download new build
         if: steps.check_existing.outputs.exists == 'false'
