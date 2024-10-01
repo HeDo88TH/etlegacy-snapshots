@@ -13,10 +13,26 @@ on:
         default: '310'
 
 jobs:
-  example_job:
+  get_commit_hash:
     runs-on: ubuntu-latest
+    outputs:
+      commit_hash: ${{ steps.get_commit_hash.outputs.commit_hash }}
     steps:
       - name: Show input parameters
         run: |
-          echo "Git Tag: ${{ github.event.inputs.git_tag }}"
-          echo "Git Commits: ${{ github.event.inputs.git_commits }}"
+
+            echo "Git Tag: ${{ github.event.inputs.git_tag }}"
+            echo "Git Commits: ${{ github.event.inputs.git_commits }}"
+
+            git clone --filter=blob:none --no-checkout https://github.com/etlegacy/etlegacy.git
+            cd etlegacy
+
+            # Fetch all tags from the remote repository
+            git fetch --tags
+
+            # Use git rev-list to find the commit at the given number of commits since the tag
+            commit_hash=$(git rev-list --reverse "${{ github.event.inputs.git_tag }}"..HEAD | sed -n "${{ github.event.inputs.git_commits }}p")
+
+            # Print the full commit hash
+            echo "Full commit hash: $commit_hash"
+
