@@ -46,6 +46,13 @@ jobs:
     needs: get_commit_hash
     steps:
 
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          repository: etlegacy/etlegacy
+          submodules: true
+          ref: ${{ needs.get_commit_hash.outputs.commit_hash }}
+
       - name: Build
         env:
           CI_ETL_DESCRIBE: ${{ needs.get_commit_hash.outputs.describe }}
