@@ -41,38 +41,38 @@ jobs:
 
             echo "Full describe: $git_describe"
 
-  # lnx64-mod:
-  #   runs-on: ubuntu-20.04
-  #   needs: get_commit_hash
-  #   steps:
+  lnx64-mod:
+    runs-on: ubuntu-20.04
+    needs: get_commit_hash
+    steps:
 
-  #     - name: Build
-  #       env:
-  #         CI_ETL_DESCRIBE: ${{needs.version.outputs.describe}}
-  #         CI_ETL_TAG: ${{needs.version.outputs.tag}}
-  #       uses: addnab/docker-run-action@v3
-  #       with:
-  #         image: etlegacy/lnx-build:latest
-  #         options: -v ${{ github.workspace }}:/code -e CI_ETL_DESCRIBE=${{needs.version.outputs.describe}} -e CI_ETL_TAG=${{needs.version.outputs.tag}} -e CI=true
-  #         run: |
-  #           git config --global --add safe.directory /code
-  #           ./easybuild.sh build -64 -mod
+      - name: Build
+        env:
+          CI_ETL_DESCRIBE: ${{ needs.get_commit_hash.outputs.describe }}
+          CI_ETL_TAG: ${{ github.event.inputs.git_tag }}
+        uses: addnab/docker-run-action@v3
+        with:
+          image: etlegacy/lnx-build:latest
+          options: -v ${{ github.workspace }}:/code -e CI_ETL_DESCRIBE=${{needs.get_commit_hash.outputs.describe}} -e CI_ETL_TAG=${{github.event.inputs.git_tag}} -e CI=true
+          run: |
+            git config --global --add safe.directory /code
+            ./easybuild.sh build -64 -mod
 
-  #     - uses: actions/upload-artifact@v4
-  #       with:
-  #         name: lnx64-mod
-  #         path: |
-  #           build/legacy/cgame*.so
-  #           build/legacy/ui*.so
-  #           build/legacy/qagame*.so
-  #           build/legacy/tvgame*.so
-  #         if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lnx64-mod
+          path: |
+            build/legacy/cgame*.so
+            build/legacy/ui*.so
+            build/legacy/qagame*.so
+            build/legacy/tvgame*.so
+          if-no-files-found: error
 
-  #     - uses: actions/upload-artifact@v4
-  #       with:
-  #         name: incomplete-mod-pk3
-  #         path: build/legacy/legacy_*.pk3
-  #         if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: incomplete-mod-pk3
+          path: build/legacy/legacy_*.pk3
+          if-no-files-found: error
 
   # lnx32-mod:
   #   runs-on: ubuntu-20.04
