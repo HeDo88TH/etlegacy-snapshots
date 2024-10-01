@@ -1,0 +1,22 @@
+name: Build Snapshot
+
+on:
+  workflow_dispatch:
+    inputs:
+      git_tag:
+        description: 'Git Tag'
+        required: true
+        default: 'v2.82.1'
+      git_commits:
+        description: 'Git Commits since last tag'
+        required: true
+        default: '310'
+
+jobs:
+  example_job:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Show input parameters
+        run: |
+          echo "Git Tag: ${{ github.event.inputs.git_tag }}"
+          echo "Git Commits: ${{ github.event.inputs.git_commits }}"
