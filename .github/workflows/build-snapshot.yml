@@ -17,8 +17,9 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       commit_hash: ${{ steps.get_commit_hash.outputs.commit_hash }}
+      describe: ${{ steps.get_commit_hash.outputs.git_describe }}
     steps:
-      - name: Show input parameters
+      - name: Calculate commit hash
         run: |
 
             echo "Git Tag: ${{ github.event.inputs.git_tag }}"
@@ -36,3 +37,188 @@ jobs:
             # Print the full commit hash
             echo "Full commit hash: $commit_hash"
 
+            git_describe=$(git describe $commit_hash --abbrev=7 2>/dev/null | awk '{$1=$1};1')
+
+            echo "Full describe: $git_describe"
+
+  # lnx64-mod:
+  #   runs-on: ubuntu-20.04
+  #   needs: get_commit_hash
+  #   steps:
+
+  #     - name: Build
+  #       env:
+  #         CI_ETL_DESCRIBE: ${{needs.version.outputs.describe}}
+  #         CI_ETL_TAG: ${{needs.version.outputs.tag}}
+  #       uses: addnab/docker-run-action@v3
+  #       with:
+  #         image: etlegacy/lnx-build:latest
+  #         options: -v ${{ github.workspace }}:/code -e CI_ETL_DESCRIBE=${{needs.version.outputs.describe}} -e CI_ETL_TAG=${{needs.version.outputs.tag}} -e CI=true
+  #         run: |
+  #           git config --global --add safe.directory /code
+  #           ./easybuild.sh build -64 -mod
+
+  #     - uses: actions/upload-artifact@v4
+  #       with:
+  #         name: lnx64-mod
+  #         path: |
+  #           build/legacy/cgame*.so
+  #           build/legacy/ui*.so
+  #           build/legacy/qagame*.so
+  #           build/legacy/tvgame*.so
+  #         if-no-files-found: error
+
+  #     - uses: actions/upload-artifact@v4
+  #       with:
+  #         name: incomplete-mod-pk3
+  #         path: build/legacy/legacy_*.pk3
+  #         if-no-files-found: error
+
+  # lnx32-mod:
+  #   runs-on: ubuntu-20.04
+  #   needs: version
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #       with:
+  #         submodules: true
+
+  #     - name: Build
+  #       env:
+  #         CI_ETL_DESCRIBE: ${{needs.version.outputs.describe}}
+  #         CI_ETL_TAG: ${{needs.version.outputs.tag}}
+  #       uses: addnab/docker-run-action@v3
+  #       with:
+  #         image: etlegacy/lnx-build:latest
+  #         options: -v ${{ github.workspace }}:/code -e CI_ETL_DESCRIBE=${{needs.version.outputs.describe}} -e CI_ETL_TAG=${{needs.version.outputs.tag}} -e CI=true
+  #         run: |
+  #           git config --global --add safe.directory /code
+  #           ./easybuild.sh build -mod
+
+  #     - uses: actions/upload-artifact@v4
+  #       with:
+  #         name: lnx32-mod
+  #         path: |
+  #           build/legacy/cgame*.so
+  #           build/legacy/ui*.so
+  #           build/legacy/qagame*.so
+  #           build/legacy/tvgame*.so
+  #         if-no-files-found: error
+
+  # lnx-aarch64-mod:
+  #   runs-on: ubuntu-20.04
+  #   needs: version
+  #   container:
+  #     image: etlegacy/lnx-aarch64-build
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #       with:
+  #         submodules: true
+
+  #     - name: Build
+  #       env:
+  #         CI_ETL_DESCRIBE: ${{needs.version.outputs.describe}}
+  #         CI_ETL_TAG: ${{needs.version.outputs.tag}}
+  #       run: |
+  #         git config --global --add safe.directory "$GITHUB_WORKSPACE"
+  #         ./easybuild.sh build -RPIT -mod -ninja
+
+  #     - uses: actions/upload-artifact@v4
+  #       with:
+  #         name: lnx-aarch64-mod
+  #         path: |
+  #           build/legacy/cgame*.so
+  #           build/legacy/ui*.so
+  #           build/legacy/qagame*.so
+  #           build/legacy/tvgame*.so
+  #         if-no-files-found: error
+
+  # osx-mod:
+  #   runs-on: macos-12
+  #   needs: version
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #       with:
+  #         submodules: true
+
+  #     - name: Install dependencies
+  #       run: brew bundle
+
+  #     - name: List dev tools
+  #       run: |
+  #         # shellcheck disable=SC2010
+  #         ls -la /Applications/ | grep Xcode
+  #         ls -la /Library/Developer/CommandLineTools/SDKs/
+  #         xcode-select --print-path
+  #         xcrun -sdk macosx --show-sdk-path
+
+  #     - name: Build
+  #       env:
+  #         SDKROOT: /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk
+  #         DEVELOPER_DIR: /Library/Developer/CommandLineTools
+  #         CI_ETL_DESCRIBE: ${{needs.version.outputs.describe}}
+  #         CI_ETL_TAG: ${{needs.version.outputs.tag}}
+  #       shell: bash
+  #       run: |
+  #         ./easybuild.sh build -64 -mod --osx=10.10 --osx-arc="x86_64;arm64" -j
+
+  #     - uses: actions/upload-artifact@v4
+  #       with:
+  #         name: osx-mod
+  #         path: |
+  #           build/legacy/cgame_mac
+  #           build/legacy/ui_mac
+  #           build/legacy/qagame_mac
+  #           build/legacy/tvgame_mac
+  #         if-no-files-found: error
+
+  # win-mod:
+  #   runs-on: windows-2019
+  #   needs: version
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #       with:
+  #         submodules: true
+
+  #     - name: Build
+  #       shell: cmd
+  #       env:
+  #         CI_ETL_DESCRIBE: ${{needs.version.outputs.describe}}
+  #         CI_ETL_TAG: ${{needs.version.outputs.tag}}
+  #       run: |
+  #         call .\easybuild.bat build -mod
+
+  #     - uses: actions/upload-artifact@v4
+  #       with:
+  #         name: win-mod
+  #         path: |
+  #           build/legacy/cgame*.dll
+  #           build/legacy/ui*.dll
+  #           build/legacy/qagame*.dll
+  #           build/legacy/tvgame*.dll
+  #         if-no-files-found: error
+
+  # win64-mod:
+  #   runs-on: windows-2019
+  #   needs: version
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #       with:
+  #         submodules: true
+
+  #     - name: Build
+  #       shell: cmd
+  #       env:
+  #         CI_ETL_DESCRIBE: ${{needs.version.outputs.describe}}
+  #         CI_ETL_TAG: ${{needs.version.outputs.tag}}
+  #       run: |
+  #         call .\easybuild.bat build -mod -64
+
+  #     - uses: actions/upload-artifact@v4
+  #       with:
+  #         name: win64-mod
+  #         path: |
+  #           build/legacy/cgame*.dll
+  #           build/legacy/ui*.dll
+  #           build/legacy/qagame*.dll
+  #           build/legacy/tvgame*.dll
+  #         if-no-files-found: error
