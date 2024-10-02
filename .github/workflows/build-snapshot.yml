@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       commit_hash: ${{ steps.calculate_commit_hash.outputs.commit_hash }}
-      describe: ${{ steps.calculate_commit_hash.outputs.git_describe }}
+      describe: ${{ steps.calculate_commit_hash.outputs.describe }}
     steps:
       - name: Calculate commit hash
         run: |
@@ -37,9 +37,9 @@ jobs:
           # Print the full commit hash
           echo "Full commit hash: $commit_hash"
 
-          export git_describe=$(git describe $commit_hash --abbrev=7 2>/dev/null | awk '{$1=$1};1')
+          export describe=$(git describe $commit_hash --abbrev=7 2>/dev/null | awk '{$1=$1};1')
 
-          echo "Full describe: $git_describe"
+          echo "Full describe: $describe"
 
   lnx64-mod:
     runs-on: ubuntu-20.04
