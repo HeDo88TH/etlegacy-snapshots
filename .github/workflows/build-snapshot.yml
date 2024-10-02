@@ -13,13 +13,14 @@ on:
         default: "297"
 
 jobs:
-  get_commit_hash:
+  version:
     runs-on: ubuntu-latest
     outputs:
-      commit_hash: ${{ steps.calculate_commit_hash.outputs.commit_hash }}
-      describe: ${{ steps.calculate_commit_hash.outputs.describe }}
+      commit_hash: ${{ steps.git.outputs.commit_hash }}
+      describe: ${{ steps.git.outputs.describe }}
     steps:
       - name: Calculate commit hash
+        id: git
         run: |
 
           echo "Git Tag: ${{ github.event.inputs.git_tag }}"
@@ -43,29 +44,29 @@ jobs:
 
   lnx64-mod:
     runs-on: ubuntu-20.04
-    needs: get_commit_hash
+    needs: version
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           repository: etlegacy/etlegacy
           submodules: true
-          ref: ${{ needs.get_commit_hash.outputs.commit_hash }}
+          ref: ${{ needs.version.outputs.commit_hash }}
 
       - name: Info
         run: |
-          echo "Commit Hash: ${{ needs.get_commit_hash.outputs.commit_hash }}"
-          echo "Describe: ${{ needs.get_commit_hash.outputs.describe }}"
+          echo "Commit Hash: ${{ needs.version.outputs.commit_hash }}"
+          echo "Describe: ${{ needs.version.outputs.describe }}"
           echo "Git Tag: ${{ github.event.inputs.git_tag }}"
 
       - name: Build
         env:
-          CI_ETL_DESCRIBE: ${{ needs.get_commit_hash.outputs.describe }}
+          CI_ETL_DESCRIBE: ${{ needs.version.outputs.describe }}
           CI_ETL_TAG: ${{ github.event.inputs.git_tag }}
         uses: addnab/docker-run-action@v3
         with:
           image: etlegacy/lnx-build:latest
-          options: -v ${{ github.workspace }}:/code -e CI_ETL_DESCRIBE=${{needs.get_commit_hash.outputs.describe}} -e CI_ETL_TAG=${{github.event.inputs.git_tag}} -e CI=true
+          options: -v ${{ github.workspace }}:/code -e CI_ETL_DESCRIBE=${{needs.version.outputs.describe}} -e CI_ETL_TAG=${{github.event.inputs.git_tag}} -e CI=true
           run: |
             git config --global --add safe.directory /code
             ./easybuild.sh build -64 -mod
@@ -88,23 +89,23 @@ jobs:
 
   lnx32-mod:
     runs-on: ubuntu-20.04
-    needs: get_commit_hash
+    needs: version
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           repository: etlegacy/etlegacy
           submodules: true
-          ref: ${{ needs.get_commit_hash.outputs.commit_hash }}
+          ref: ${{ needs.version.outputs.commit_hash }}
 
       - name: Build
         env:
-          CI_ETL_DESCRIBE: ${{ needs.get_commit_hash.outputs.describe }}
+          CI_ETL_DESCRIBE: ${{ needs.version.outputs.describe }}
           CI_ETL_TAG: ${{ github.event.inputs.git_tag }}
         uses: addnab/docker-run-action@v3
         with:
           image: etlegacy/lnx-build:latest
-          options: -v ${{ github.workspace }}:/code -e CI_ETL_DESCRIBE=${{needs.get_commit_hash.outputs.describe}} -e CI_ETL_TAG=${{github.event.inputs.git_tag}} -e CI=true
+          options: -v ${{ github.workspace }}:/code -e CI_ETL_DESCRIBE=${{needs.version.outputs.describe}} -e CI_ETL_TAG=${{github.event.inputs.git_tag}} -e CI=true
           run: |
             git config --global --add safe.directory /code
             ./easybuild.sh build -mod
@@ -121,7 +122,7 @@ jobs:
 
   lnx-aarch64-mod:
     runs-on: ubuntu-20.04
-    needs: get_commit_hash
+    needs: version
     container:
       image: etlegacy/lnx-aarch64-build
     steps:
@@ -130,11 +131,11 @@ jobs:
         with:
           repository: etlegacy/etlegacy
           submodules: true
-          ref: ${{ needs.get_commit_hash.outputs.commit_hash }}
+          ref: ${{ needs.version.outputs.commit_hash }}
 
       - name: Build
         env:
-          CI_ETL_DESCRIBE: ${{needs.get_commit_hash.outputs.describe}}
+          CI_ETL_DESCRIBE: ${{needs.version.outputs.describe}}
           CI_ETL_TAG: ${{github.event.inputs.git_tag}}
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
@@ -152,14 +153,14 @@ jobs:
 
   osx-mod:
     runs-on: macos-12
-    needs: get_commit_hash
+    needs: version
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           repository: etlegacy/etlegacy
           submodules: true
-          ref: ${{ needs.get_commit_hash.outputs.commit_hash }}
+          ref: ${{ needs.version.outputs.commit_hash }}
 
       - name: Install dependencies
         run: brew bundle
@@ -176,7 +177,7 @@ jobs:
         env:
           SDKROOT: /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk
           DEVELOPER_DIR: /Library/Developer/CommandLineTools
-          CI_ETL_DESCRIBE: ${{needs.get_commit_hash.outputs.describe}}
+          CI_ETL_DESCRIBE: ${{needs.version.outputs.describe}}
           CI_ETL_TAG: ${{github.event.inputs.git_tag}}
         shell: bash
         run: |
@@ -194,19 +195,19 @@ jobs:
 
   win-mod:
     runs-on: windows-2019
-    needs: get_commit_hash
+    needs: version
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           repository: etlegacy/etlegacy
           submodules: true
-          ref: ${{ needs.get_commit_hash.outputs.commit_hash }}
+          ref: ${{ needs.version.outputs.commit_hash }}
 
       - name: Build
         shell: cmd
         env:
-          CI_ETL_DESCRIBE: ${{needs.get_commit_hash.outputs.describe}}
+          CI_ETL_DESCRIBE: ${{needs.version.outputs.describe}}
           CI_ETL_TAG: ${{github.event.inputs.git_tag}}
         run: |
           call .\easybuild.bat build -mod
@@ -223,19 +224,19 @@ jobs:
 
   win64-mod:
     runs-on: windows-2019
-    needs: get_commit_hash
+    needs: version
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           repository: etlegacy/etlegacy
           submodules: true
-          ref: ${{ needs.get_commit_hash.outputs.commit_hash }}
+          ref: ${{ needs.version.outputs.commit_hash }}
 
       - name: Build
         shell: cmd
         env:
-          CI_ETL_DESCRIBE: ${{needs.get_commit_hash.outputs.describe}}
+          CI_ETL_DESCRIBE: ${{needs.version.outputs.describe}}
           CI_ETL_TAG: ${{github.event.inputs.git_tag}}
         run: |
           call .\easybuild.bat build -mod -64
@@ -252,12 +253,12 @@ jobs:
 
   # android-mod:
   #   runs-on: ubuntu-20.04
-  #   needs: get_commit_hash
+  #   needs: version
   #   env:
   #     SIGNING_KEY_ALIAS: "test_alias"
   #     SIGNING_KEY_PASSWORD: "test_key_password"
   #     SIGNING_STORE_PASSWORD: "test_store_password"
-  #     CI_ETL_DESCRIBE: ${{needs.get_commit_hash.outputs.describe}}
+  #     CI_ETL_DESCRIBE: ${{needs.version.outputs.describe}}
   #     CI_ETL_TAG: ${{github.event.inputs.git_tag}}
   #   container:
   #     image: etlegacy/android-build
@@ -267,7 +268,7 @@ jobs:
   #       with:
   #         repository: etlegacy/etlegacy
   #         submodules: true
-  #         ref: ${{ needs.get_commit_hash.outputs.commit_hash }}
+  #         ref: ${{ needs.version.outputs.commit_hash }}
 
   #     - name: Setup JDK
   #       uses: actions/setup-java@v4
@@ -334,13 +335,13 @@ jobs:
 
   mod-merger:
     runs-on: ubuntu-20.04
-    needs: [ get_commit_hash, lnx64-mod, lnx32-mod, osx-mod, win-mod, win64-mod, lnx-aarch64-mod] #, android-mod ]
+    needs: [ version, lnx64-mod, lnx32-mod, osx-mod, win-mod, win64-mod, lnx-aarch64-mod] #, android-mod ]
     steps:
 
       - name: Info
         run: |
-          echo "Commit Hash: ${{ needs.get_commit_hash.outputs.commit_hash }}"
-          echo "Describe: ${{ needs.get_commit_hash.outputs.describe }}"
+          echo "Commit Hash: ${{ needs.version.outputs.commit_hash }}"
+          echo "Describe: ${{ needs.version.outputs.describe }}"
           echo "Git Tag: ${{ github.event.inputs.git_tag }}"
 
       - uses: actions/download-artifact@v4
@@ -366,7 +367,7 @@ jobs:
       - name: Create mod zip
         shell: bash
         run: |
-          zip -rvj -MM etlegacy-mod-${{needs.get_commit_hash.outputs.describe}}.zip legacy_*.pk3 platforms/qagame* platforms/tvgame*
+          zip -rvj -MM etlegacy-mod-${{needs.version.outputs.describe}}.zip legacy_*.pk3 platforms/qagame* platforms/tvgame*
 
       - name: Remove old artifacts
         uses: geekyeggo/delete-artifact@v4
@@ -390,9 +391,9 @@ jobs:
 
   lnx64:
     runs-on: ubuntu-20.04
-    needs: [ get_commit_hash, mod-merger ]
+    needs: [ version, mod-merger ]
     env:
-      CI_ETL_DESCRIBE: ${{needs.get_commit_hash.outputs.describe}}
+      CI_ETL_DESCRIBE: ${{needs.version.outputs.describe}}
       CI_ETL_TAG: ${{github.event.inputs.git_tag}}
     steps:
       - name: Checkout
@@ -400,19 +401,19 @@ jobs:
         with:
           repository: etlegacy/etlegacy
           submodules: true
-          ref: ${{ needs.get_commit_hash.outputs.commit_hash }}
+          ref: ${{ needs.version.outputs.commit_hash }}
 
       - name: Info
         run: |
-          echo "Commit Hash: ${{ needs.get_commit_hash.outputs.commit_hash }}"
-          echo "Describe: ${{ needs.get_commit_hash.outputs.describe }}"
+          echo "Commit Hash: ${{ needs.version.outputs.commit_hash }}"
+          echo "Describe: ${{ needs.version.outputs.describe }}"
           echo "Git Tag: ${{ github.event.inputs.git_tag }}"
 
       - name: Build
         uses: addnab/docker-run-action@v3
         with:
           image: etlegacy/lnx-build:latest
-          options: -v ${{ github.workspace }}:/code -e CI_ETL_DESCRIBE=${{needs.get_commit_hash.outputs.describe}} -e CI_ETL_TAG=${{github.event.inputs.git_tag}} -e CI=true
+          options: -v ${{ github.workspace }}:/code -e CI_ETL_DESCRIBE=${{needs.version.outputs.describe}} -e CI_ETL_TAG=${{github.event.inputs.git_tag}} -e CI=true
           run: |
             git config --global --add safe.directory /code
             ./easybuild.sh build -64
@@ -436,7 +437,7 @@ jobs:
         uses: addnab/docker-run-action@v3
         with:
           image: etlegacy/lnx-build:latest
-          options: -v ${{ github.workspace }}:/code -e CI_ETL_DESCRIBE=${{needs.get_commit_hash.outputs.describe}} -e CI_ETL_TAG=${{github.event.inputs.git_tag}} -e CI=true
+          options: -v ${{ github.workspace }}:/code -e CI_ETL_DESCRIBE=${{needs.version.outputs.describe}} -e CI_ETL_TAG=${{github.event.inputs.git_tag}} -e CI=true
           run: |
             cd build/
             cpack
