@@ -263,6 +263,9 @@ jobs:
     env:
       CI_ETL_DESCRIBE: ${{needs.version.outputs.describe}}
       CI_ETL_TAG: ${{github.event.inputs.git_tag}}
+      SIGNING_KEY_ALIAS: debug
+      SIGNING_KEY_PASSWORD: android
+      SIGNING_STORE_PASSWORD: android
     container:
       image: etlegacy/android-build
     steps:
@@ -278,6 +281,21 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
+
+      - name: Create Debug Keystore
+        run: |
+          keytool -genkey -v -keystore debug.keystore -alias debug -keyalg RSA -keysize 2048 -validity 10000 \
+          -storepass android -keypass android \
+          -dname "CN=Debug,OU=Debug,O=Debug,L=Debug,S=Debug,C=US"
+
+      - name: Create Signing Configuration
+        run: |
+          cat << EOF > app/signing.properties
+          storeFile=debug.keystore
+          keyAlias=debug
+          storePassword=android
+          keyPassword=android
+          EOF
 
       - name: Build JoyStick Dependency
         working-directory: ./app/libs/joystick
@@ -296,15 +314,11 @@ jobs:
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           ./gradlew clean assembleRelease \
-            -Dandroid.defaults.signing.enabled=false \
-            -Pandroid.defaults.signing.enabled=false \
-            -Pandroid.enableR8.fullMode=false \
-            -Pandroid.injected.signing.store.file=/dev/null \
+            -Pandroid.injected.signing.store.file=$GITHUB_WORKSPACE/app/debug.keystore \
             -Pandroid.injected.signing.store.password=android \
-            -Pandroid.injected.signing.key.alias=androiddebugkey \
+            -Pandroid.injected.signing.key.alias=debug \
             -Pandroid.injected.signing.key.password=android \
             --stacktrace --info
-          ls -R
 
       - name: Prepare intermediate files
         run: |
