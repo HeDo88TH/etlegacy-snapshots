@@ -16,8 +16,8 @@ jobs:
   get_commit_hash:
     runs-on: ubuntu-latest
     outputs:
-      commit_hash: ${{ steps.get_commit_hash.outputs.commit_hash }}
-      describe: ${{ steps.get_commit_hash.outputs.git_describe }}
+      commit_hash: ${{ steps.calculate_commit_hash.outputs.commit_hash }}
+      describe: ${{ steps.calculate_commit_hash.outputs.git_describe }}
     steps:
       - name: Calculate commit hash
         run: |
@@ -32,12 +32,12 @@ jobs:
           git fetch --tags
 
           # Use git rev-list to find the commit at the given number of commits since the tag
-          commit_hash=$(git rev-list --reverse "${{ github.event.inputs.git_tag }}"..HEAD | sed -n "${{ github.event.inputs.git_commits }}p")
+          export commit_hash=$(git rev-list --reverse "${{ github.event.inputs.git_tag }}"..HEAD | sed -n "${{ github.event.inputs.git_commits }}p")
 
           # Print the full commit hash
           echo "Full commit hash: $commit_hash"
 
-          git_describe=$(git describe $commit_hash --abbrev=7 2>/dev/null | awk '{$1=$1};1')
+          export git_describe=$(git describe $commit_hash --abbrev=7 2>/dev/null | awk '{$1=$1};1')
 
           echo "Full describe: $git_describe"
 
@@ -51,6 +51,12 @@ jobs:
           repository: etlegacy/etlegacy
           submodules: true
           ref: ${{ needs.get_commit_hash.outputs.commit_hash }}
+
+      - name: Info
+        run: |
+          echo "Commit Hash: ${{ needs.get_commit_hash.outputs.commit_hash }}"
+          echo "Describe: ${{ needs.get_commit_hash.outputs.describe }}"
+          echo "Git Tag: ${{ github.event.inputs.git_tag }}"
 
       - name: Build
         env:
@@ -331,6 +337,12 @@ jobs:
     needs: [ get_commit_hash, lnx64-mod, lnx32-mod, osx-mod, win-mod, win64-mod, lnx-aarch64-mod] #, android-mod ]
     steps:
 
+      - name: Info
+        run: |
+          echo "Commit Hash: ${{ needs.get_commit_hash.outputs.commit_hash }}"
+          echo "Describe: ${{ needs.get_commit_hash.outputs.describe }}"
+          echo "Git Tag: ${{ github.event.inputs.git_tag }}"
+
       - uses: actions/download-artifact@v4
         with:
           name: incomplete-mod-pk3
@@ -389,6 +401,12 @@ jobs:
           repository: etlegacy/etlegacy
           submodules: true
           ref: ${{ needs.get_commit_hash.outputs.commit_hash }}
+
+      - name: Info
+        run: |
+          echo "Commit Hash: ${{ needs.get_commit_hash.outputs.commit_hash }}"
+          echo "Describe: ${{ needs.get_commit_hash.outputs.describe }}"
+          echo "Git Tag: ${{ github.event.inputs.git_tag }}"
 
       - name: Build
         uses: addnab/docker-run-action@v3
