@@ -4,13 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       git_tag:
-        description: 'Git Tag'
+        description: "Git Tag"
         required: true
-        default: 'v2.82.1'
+        default: "v2.82.1"
       git_commits:
-        description: 'Git Commits since last tag'
+        description: "Git Commits since last tag"
         required: true
-        default: '310'
+        default: "310"
 
 jobs:
   get_commit_hash:
@@ -22,30 +22,29 @@ jobs:
       - name: Calculate commit hash
         run: |
 
-            echo "Git Tag: ${{ github.event.inputs.git_tag }}"
-            echo "Git Commits: ${{ github.event.inputs.git_commits }}"
+          echo "Git Tag: ${{ github.event.inputs.git_tag }}"
+          echo "Git Commits: ${{ github.event.inputs.git_commits }}"
 
-            git clone --filter=blob:none --no-checkout https://github.com/etlegacy/etlegacy.git
-            cd etlegacy
+          git clone --filter=blob:none --no-checkout https://github.com/etlegacy/etlegacy.git
+          cd etlegacy
 
-            # Fetch all tags from the remote repository
-            git fetch --tags
+          # Fetch all tags from the remote repository
+          git fetch --tags
 
-            # Use git rev-list to find the commit at the given number of commits since the tag
-            commit_hash=$(git rev-list --reverse "${{ github.event.inputs.git_tag }}"..HEAD | sed -n "${{ github.event.inputs.git_commits }}p")
+          # Use git rev-list to find the commit at the given number of commits since the tag
+          commit_hash=$(git rev-list --reverse "${{ github.event.inputs.git_tag }}"..HEAD | sed -n "${{ github.event.inputs.git_commits }}p")
 
-            # Print the full commit hash
-            echo "Full commit hash: $commit_hash"
+          # Print the full commit hash
+          echo "Full commit hash: $commit_hash"
 
-            git_describe=$(git describe $commit_hash --abbrev=7 2>/dev/null | awk '{$1=$1};1')
+          git_describe=$(git describe $commit_hash --abbrev=7 2>/dev/null | awk '{$1=$1};1')
 
-            echo "Full describe: $git_describe"
+          echo "Full describe: $git_describe"
 
   lnx64-mod:
     runs-on: ubuntu-20.04
     needs: get_commit_hash
     steps:
-
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -81,151 +80,245 @@ jobs:
           path: build/legacy/legacy_*.pk3
           if-no-files-found: error
 
-  # lnx32-mod:
-  #   runs-on: ubuntu-20.04
-  #   needs: version
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #       with:
-  #         submodules: true
+  lnx32-mod:
+    runs-on: ubuntu-20.04
+    needs: get_commit_hash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          repository: etlegacy/etlegacy
+          submodules: true
+          ref: ${{ needs.get_commit_hash.outputs.commit_hash }}
 
-  #     - name: Build
-  #       env:
-  #         CI_ETL_DESCRIBE: ${{needs.version.outputs.describe}}
-  #         CI_ETL_TAG: ${{needs.version.outputs.tag}}
-  #       uses: addnab/docker-run-action@v3
-  #       with:
-  #         image: etlegacy/lnx-build:latest
-  #         options: -v ${{ github.workspace }}:/code -e CI_ETL_DESCRIBE=${{needs.version.outputs.describe}} -e CI_ETL_TAG=${{needs.version.outputs.tag}} -e CI=true
-  #         run: |
-  #           git config --global --add safe.directory /code
-  #           ./easybuild.sh build -mod
+      - name: Build
+        env:
+          CI_ETL_DESCRIBE: ${{ needs.get_commit_hash.outputs.describe }}
+          CI_ETL_TAG: ${{ github.event.inputs.git_tag }}
+        uses: addnab/docker-run-action@v3
+        with:
+          image: etlegacy/lnx-build:latest
+          options: -v ${{ github.workspace }}:/code -e CI_ETL_DESCRIBE=${{needs.get_commit_hash.outputs.describe}} -e CI_ETL_TAG=${{github.event.inputs.git_tag}} -e CI=true
+          run: |
+            git config --global --add safe.directory /code
+            ./easybuild.sh build -mod
 
-  #     - uses: actions/upload-artifact@v4
-  #       with:
-  #         name: lnx32-mod
-  #         path: |
-  #           build/legacy/cgame*.so
-  #           build/legacy/ui*.so
-  #           build/legacy/qagame*.so
-  #           build/legacy/tvgame*.so
-  #         if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lnx32-mod
+          path: |
+            build/legacy/cgame*.so
+            build/legacy/ui*.so
+            build/legacy/qagame*.so
+            build/legacy/tvgame*.so
+          if-no-files-found: error
 
-  # lnx-aarch64-mod:
-  #   runs-on: ubuntu-20.04
-  #   needs: version
-  #   container:
-  #     image: etlegacy/lnx-aarch64-build
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #       with:
-  #         submodules: true
+  lnx-aarch64-mod:
+    runs-on: ubuntu-20.04
+    needs: get_commit_hash
+    container:
+      image: etlegacy/lnx-aarch64-build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          repository: etlegacy/etlegacy
+          submodules: true
+          ref: ${{ needs.get_commit_hash.outputs.commit_hash }}
 
-  #     - name: Build
-  #       env:
-  #         CI_ETL_DESCRIBE: ${{needs.version.outputs.describe}}
-  #         CI_ETL_TAG: ${{needs.version.outputs.tag}}
-  #       run: |
-  #         git config --global --add safe.directory "$GITHUB_WORKSPACE"
-  #         ./easybuild.sh build -RPIT -mod -ninja
+      - name: Build
+        env:
+          CI_ETL_DESCRIBE: ${{needs.get_commit_hash.outputs.describe}}
+          CI_ETL_TAG: ${{github.event.inputs.git_tag}}
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          ./easybuild.sh build -RPIT -mod -ninja
 
-  #     - uses: actions/upload-artifact@v4
-  #       with:
-  #         name: lnx-aarch64-mod
-  #         path: |
-  #           build/legacy/cgame*.so
-  #           build/legacy/ui*.so
-  #           build/legacy/qagame*.so
-  #           build/legacy/tvgame*.so
-  #         if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lnx-aarch64-mod
+          path: |
+            build/legacy/cgame*.so
+            build/legacy/ui*.so
+            build/legacy/qagame*.so
+            build/legacy/tvgame*.so
+          if-no-files-found: error
 
-  # osx-mod:
-  #   runs-on: macos-12
-  #   needs: version
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #       with:
-  #         submodules: true
+  osx-mod:
+    runs-on: macos-12
+    needs: get_commit_hash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          repository: etlegacy/etlegacy
+          submodules: true
+          ref: ${{ needs.get_commit_hash.outputs.commit_hash }}
 
-  #     - name: Install dependencies
-  #       run: brew bundle
+      - name: Install dependencies
+        run: brew bundle
 
-  #     - name: List dev tools
-  #       run: |
-  #         # shellcheck disable=SC2010
-  #         ls -la /Applications/ | grep Xcode
-  #         ls -la /Library/Developer/CommandLineTools/SDKs/
-  #         xcode-select --print-path
-  #         xcrun -sdk macosx --show-sdk-path
+      - name: List dev tools
+        run: |
+          # shellcheck disable=SC2010
+          ls -la /Applications/ | grep Xcode
+          ls -la /Library/Developer/CommandLineTools/SDKs/
+          xcode-select --print-path
+          xcrun -sdk macosx --show-sdk-path
 
-  #     - name: Build
-  #       env:
-  #         SDKROOT: /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk
-  #         DEVELOPER_DIR: /Library/Developer/CommandLineTools
-  #         CI_ETL_DESCRIBE: ${{needs.version.outputs.describe}}
-  #         CI_ETL_TAG: ${{needs.version.outputs.tag}}
-  #       shell: bash
-  #       run: |
-  #         ./easybuild.sh build -64 -mod --osx=10.10 --osx-arc="x86_64;arm64" -j
+      - name: Build
+        env:
+          SDKROOT: /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk
+          DEVELOPER_DIR: /Library/Developer/CommandLineTools
+          CI_ETL_DESCRIBE: ${{needs.get_commit_hash.outputs.describe}}
+          CI_ETL_TAG: ${{github.event.inputs.git_tag}}
+        shell: bash
+        run: |
+          ./easybuild.sh build -64 -mod --osx=10.10 --osx-arc="x86_64;arm64" -j
 
-  #     - uses: actions/upload-artifact@v4
-  #       with:
-  #         name: osx-mod
-  #         path: |
-  #           build/legacy/cgame_mac
-  #           build/legacy/ui_mac
-  #           build/legacy/qagame_mac
-  #           build/legacy/tvgame_mac
-  #         if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: osx-mod
+          path: |
+            build/legacy/cgame_mac
+            build/legacy/ui_mac
+            build/legacy/qagame_mac
+            build/legacy/tvgame_mac
+          if-no-files-found: error
 
-  # win-mod:
-  #   runs-on: windows-2019
-  #   needs: version
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #       with:
-  #         submodules: true
+  win-mod:
+    runs-on: windows-2019
+    needs: get_commit_hash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          repository: etlegacy/etlegacy
+          submodules: true
+          ref: ${{ needs.get_commit_hash.outputs.commit_hash }}
 
-  #     - name: Build
-  #       shell: cmd
-  #       env:
-  #         CI_ETL_DESCRIBE: ${{needs.version.outputs.describe}}
-  #         CI_ETL_TAG: ${{needs.version.outputs.tag}}
-  #       run: |
-  #         call .\easybuild.bat build -mod
+      - name: Build
+        shell: cmd
+        env:
+          CI_ETL_DESCRIBE: ${{needs.get_commit_hash.outputs.describe}}
+          CI_ETL_TAG: ${{github.event.inputs.git_tag}}
+        run: |
+          call .\easybuild.bat build -mod
 
-  #     - uses: actions/upload-artifact@v4
-  #       with:
-  #         name: win-mod
-  #         path: |
-  #           build/legacy/cgame*.dll
-  #           build/legacy/ui*.dll
-  #           build/legacy/qagame*.dll
-  #           build/legacy/tvgame*.dll
-  #         if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: win-mod
+          path: |
+            build/legacy/cgame*.dll
+            build/legacy/ui*.dll
+            build/legacy/qagame*.dll
+            build/legacy/tvgame*.dll
+          if-no-files-found: error
 
-  # win64-mod:
-  #   runs-on: windows-2019
-  #   needs: version
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #       with:
-  #         submodules: true
+  win64-mod:
+    runs-on: windows-2019
+    needs: get_commit_hash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          repository: etlegacy/etlegacy
+          submodules: true
+          ref: ${{ needs.get_commit_hash.outputs.commit_hash }}
 
-  #     - name: Build
-  #       shell: cmd
-  #       env:
-  #         CI_ETL_DESCRIBE: ${{needs.version.outputs.describe}}
-  #         CI_ETL_TAG: ${{needs.version.outputs.tag}}
-  #       run: |
-  #         call .\easybuild.bat build -mod -64
+      - name: Build
+        shell: cmd
+        env:
+          CI_ETL_DESCRIBE: ${{needs.get_commit_hash.outputs.describe}}
+          CI_ETL_TAG: ${{github.event.inputs.git_tag}}
+        run: |
+          call .\easybuild.bat build -mod -64
 
-  #     - uses: actions/upload-artifact@v4
-  #       with:
-  #         name: win64-mod
-  #         path: |
-  #           build/legacy/cgame*.dll
-  #           build/legacy/ui*.dll
-  #           build/legacy/qagame*.dll
-  #           build/legacy/tvgame*.dll
-  #         if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: win64-mod
+          path: |
+            build/legacy/cgame*.dll
+            build/legacy/ui*.dll
+            build/legacy/qagame*.dll
+            build/legacy/tvgame*.dll
+          if-no-files-found: error
+
+  android-mod:
+    runs-on: ubuntu-20.04
+    needs: get_commit_hash
+    env:
+      CI_ETL_DESCRIBE: ${{needs.get_commit_hash.outputs.describe}}
+      CI_ETL_TAG: ${{github.event.inputs.git_tag}}
+    container:
+      image: etlegacy/android-build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          repository: etlegacy/etlegacy
+          submodules: true
+          ref: ${{ needs.get_commit_hash.outputs.commit_hash }}
+
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Build JoyStick Dependency
+        working-directory: ./app/libs/joystick
+        run: |
+          ./gradlew clean               --stacktrace --info
+          ./gradlew assembleRelease     --stacktrace --info
+          ./gradlew publishToMavenLocal --stacktrace --info
+
+      - name: Upload JoyStick Dependency Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-joystick-packages
+          path: '/root/.m2/repository/com/etlegacy/android/joystick/'
+          if-no-files-found: error
+
+      - name: Build Release
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          ./gradlew clean assembleRelease --stacktrace --info
+          ls -R
+
+      - name: Prepare artifacts
+        run: |
+          mv ./app/build/intermediates/merged_native_libs/*/out/lib/arm64-v8a/libcgame*.so .
+          mv ./app/build/intermediates/merged_native_libs/*/out/lib/arm64-v8a/libui*.so .
+          mv ./app/build/intermediates/merged_native_libs/*/out/lib/x86/libcgame*.so .
+          mv ./app/build/intermediates/merged_native_libs/*/out/lib/x86/libui*.so .
+          mv ./app/build/intermediates/merged_native_libs/*/out/lib/x86_64/libcgame*.so .
+          mv ./app/build/intermediates/merged_native_libs/*/out/lib/x86_64/libui*.so .
+          ls -ltrah
+
+      - name: Upload arm64-v8a
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-arm64-mod
+          path: |
+            libcgame*arm64*.so
+            libui*arm64*.so
+          if-no-files-found: error
+
+      - name: Upload x86
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-x86-mod
+          path: |
+            libcgame*i386.so
+            libui*i386.so
+          if-no-files-found: error
+
+      - name: Upload x86_64
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-x86_64-mod
+          path: |
+            libcgame*x86_64.so
+            libui*x86_64.so
+          if-no-files-found: error
