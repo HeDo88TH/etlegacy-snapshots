@@ -12,6 +12,9 @@ on:
         required: true
         default: "297"
 
+permissions:
+  contents: write         # Grants permission to push changes
+
 jobs:
   version:
     runs-on: ubuntu-latest
@@ -450,5 +453,4 @@ jobs:
           name: lnx64-packages
           path: |
             build/etlegacy-*.tar.gz
-            build/etlegacy-*.sh
           if-no-files-found: error
