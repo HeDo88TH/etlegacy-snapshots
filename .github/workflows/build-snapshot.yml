@@ -10,7 +10,7 @@ on:
       git_commits:
         description: "Git Commits since last tag"
         required: true
-        default: "310"
+        default: "297"
 
 jobs:
   get_commit_hash:
@@ -248,6 +248,9 @@ jobs:
     runs-on: ubuntu-20.04
     needs: get_commit_hash
     env:
+      SIGNING_KEY_ALIAS: "test_alias"
+      SIGNING_KEY_PASSWORD: "test_key_password"
+      SIGNING_STORE_PASSWORD: "test_store_password"
       CI_ETL_DESCRIBE: ${{needs.get_commit_hash.outputs.describe}}
       CI_ETL_TAG: ${{github.event.inputs.git_tag}}
     container:
