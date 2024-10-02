@@ -45,7 +45,7 @@ jobs:
         id: check_existing
         run: |
           FILE_NAME="${{ steps.extract_version.outputs.file_name }}"
-          if [ -f "./$FILE_NAME" ]; then
+          if [ -f "./builds/$FILE_NAME" ]; then
             echo "Build already exists, skipping."
             echo "exists=true" >> $GITHUB_OUTPUT
           else
@@ -56,13 +56,13 @@ jobs:
       - name: Download new build
         if: steps.check_existing.outputs.exists == 'false'
         run: |
-          curl -L ${{ steps.extract_url.outputs.file_url }} -o ${{ steps.extract_version.outputs.file_name }}
+          curl -L ${{ steps.extract_url.outputs.file_url }} -o builds/${{ steps.extract_version.outputs.file_name }}
 
       - name: Commit new build
         if: steps.check_existing.outputs.exists == 'false'
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
-          git add ${{ steps.extract_version.outputs.file_name }}
+          git add builds/${{ steps.extract_version.outputs.file_name }}
           git commit -m "New build ${{ steps.extract_version.outputs.version }}"
           git push
