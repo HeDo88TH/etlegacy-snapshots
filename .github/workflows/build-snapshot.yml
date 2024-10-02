@@ -33,14 +33,17 @@ jobs:
           git fetch --tags
 
           # Use git rev-list to find the commit at the given number of commits since the tag
-          export commit_hash=$(git rev-list --reverse "${{ github.event.inputs.git_tag }}"..HEAD | sed -n "${{ github.event.inputs.git_commits }}p")
+          commit_hash=$(git rev-list --reverse "${{ github.event.inputs.git_tag }}"..HEAD | sed -n "${{ github.event.inputs.git_commits }}p")
 
           # Print the full commit hash
           echo "Full commit hash: $commit_hash"
 
-          export describe=$(git describe $commit_hash --abbrev=7 2>/dev/null | awk '{$1=$1};1')
+          git_describe=$(git describe $commit_hash --abbrev=7 2>/dev/null | awk '{$1=$1};1')
 
-          echo "Full describe: $describe"
+          echo "Full describe: $git_describe"
+
+          echo "describe=$git_describe" >> "$GITHUB_OUTPUT"
+          echo "commit_hash=$commit_hash" >> "$GITHUB_OUTPUT"
 
   lnx64-mod:
     runs-on: ubuntu-20.04
