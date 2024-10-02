@@ -12,8 +12,7 @@ on:
         required: true
         default: "297"
 
-permissions:
-  contents: write-all         # Grants permission to push changes
+permissions: write-all         # Grants permission to push changes
 
 jobs:
   version:
