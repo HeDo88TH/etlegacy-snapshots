@@ -295,7 +295,15 @@ jobs:
       - name: Build Release
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          ./gradlew clean assembleRelease -Pandroid.injected.signing.store.file="" -Pandroid.injected.signing.store.password="" -Pandroid.injected.signing.key.alias="" -Pandroid.injected.signing.key.password="" --stacktrace --info
+          ./gradlew clean assembleRelease \
+            -Dandroid.defaults.signing.enabled=false \
+            -Pandroid.defaults.signing.enabled=false \
+            -Pandroid.enableR8.fullMode=false \
+            -Pandroid.injected.signing.store.file=/dev/null \
+            -Pandroid.injected.signing.store.password=android \
+            -Pandroid.injected.signing.key.alias=androiddebugkey \
+            -Pandroid.injected.signing.key.password=android \
+            --stacktrace --info
           ls -R
 
       - name: Prepare intermediate files
