@@ -282,25 +282,15 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Create Debug Keystore
+      - name: Remove signing for release build
         run: |
-          keytool -genkey -v -keystore debug.keystore -alias debug -keyalg RSA -keysize 2048 -validity 10000 \
-          -storepass android -keypass android \
-          -dname "CN=Debug,OU=Debug,O=Debug,L=Debug,S=Debug,C=US"
-
-      - name: Create Signing Configuration
-        run: |
-          cat << EOF > app/signing.properties
-          storeFile=debug.keystore
-          keyAlias=debug
-          storePassword=android
-          keyPassword=android
-          EOF
+          sed -i 's/signingConfig signingConfigs.release/signingConfig null/' ./app/build.gradle
 
       - name: Build JoyStick Dependency
         working-directory: ./app/libs/joystick
         run: |
           ./gradlew clean               --stacktrace --info
+          ./gradlew assembleRelease     --stacktrace --info
           ./gradlew publishToMavenLocal --stacktrace --info
 
       - name: Upload JoyStick Dependency Artifacts
@@ -313,12 +303,8 @@ jobs:
       - name: Build Release
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          ./gradlew clean assembleRelease \
-            -Pandroid.injected.signing.store.file=$GITHUB_WORKSPACE/app/debug.keystore \
-            -Pandroid.injected.signing.store.password=android \
-            -Pandroid.injected.signing.key.alias=debug \
-            -Pandroid.injected.signing.key.password=android \
-            --stacktrace --info
+          ./gradlew clean assembleRelease --stacktrace --info
+          ls -R
 
       - name: Prepare intermediate files
         run: |
