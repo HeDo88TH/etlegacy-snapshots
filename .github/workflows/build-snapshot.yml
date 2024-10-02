@@ -375,3 +375,58 @@ jobs:
           name: mod-zip
           path: etlegacy-mod-*.zip
           if-no-files-found: error
+
+  lnx64:
+    runs-on: ubuntu-20.04
+    needs: [ get_commit_hash, mod-merger ]
+    env:
+      CI_ETL_DESCRIBE: ${{needs.get_commit_hash.outputs.describe}}
+      CI_ETL_TAG: ${{github.event.inputs.git_tag}}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          repository: etlegacy/etlegacy
+          submodules: true
+          ref: ${{ needs.get_commit_hash.outputs.commit_hash }}
+
+      - name: Build
+        uses: addnab/docker-run-action@v3
+        with:
+          image: etlegacy/lnx-build:latest
+          options: -v ${{ github.workspace }}:/code -e CI_ETL_DESCRIBE=${{needs.get_commit_hash.outputs.describe}} -e CI_ETL_TAG=${{github.event.inputs.git_tag}} -e CI=true
+          run: |
+            git config --global --add safe.directory /code
+            ./easybuild.sh build -64
+
+      - name: Change Owner of Container Working Directory
+        run: |
+          action_name=$(whoami)
+          action_group=$(groups "$action_name" | awk '{print $3}')
+          sudo chown "${action_name}:${action_group}" -R .
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: All-mods
+          path: build/legacy
+
+      - name: Display structure of downloaded files
+        run: ls -R
+        working-directory: build/legacy
+
+      - name: Generate packages
+        uses: addnab/docker-run-action@v3
+        with:
+          image: etlegacy/lnx-build:latest
+          options: -v ${{ github.workspace }}:/code -e CI_ETL_DESCRIBE=${{needs.get_commit_hash.outputs.describe}} -e CI_ETL_TAG=${{github.event.inputs.git_tag}} -e CI=true
+          run: |
+            cd build/
+            cpack
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lnx64-packages
+          path: |
+            build/etlegacy-*.tar.gz
+            build/etlegacy-*.sh
+          if-no-files-found: error
