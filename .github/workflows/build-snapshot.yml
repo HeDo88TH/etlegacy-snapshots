@@ -292,6 +292,12 @@ jobs:
           path: '/root/.m2/repository/com/etlegacy/android/joystick/'
           if-no-files-found: error
 
+      - name: Build Release
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          ./gradlew clean assembleRelease -Pandroid.injected.signing.store.file="" -Pandroid.injected.signing.store.password="" -Pandroid.injected.signing.key.alias="" -Pandroid.injected.signing.key.password="" --stacktrace --info
+          ls -R
+
       - name: Prepare intermediate files
         run: |
           # Extract relevant intermediate files without building the APK
